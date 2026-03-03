@@ -1,0 +1,186 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+
+<div class="card shadow-sm">
+    {% if messages %}
+        {% for message in messages %}
+        {% if message.tags == 'success' %}
+          <div class="alert alert-success">{{ message }}</div>
+        {% endif %}
+        {% if message.tags == 'error' %}
+          <div class="alert alert-danger">{{ message }}</div>
+        {% endif %}
+        {% if message.tags == 'info' %}
+          <div class="alert alert-warning">{{ message }}</div>
+        {% endif %}
+        {% endfor %}
+      {% endif %}
+      
+    <div class="card-body">
+        
+        <!-- THE INPUT FORM -->
+        <form method="POST" action="{% url 'create_task' %}" class="row g-2 mb-4 align-items-center">
+            {% csrf_token %}
+            
+            <!-- Task Title Input -->
+            <div class="col-sm-5">
+                <input type="text" name="title" class="form-control" placeholder="What do you need to do?" required>
+            </div>
+
+            <!-- Start Time Input -->
+            <div class="col-sm-3">
+                <div class="input-group" title="Start Time">
+                    <span class="input-group-text"><i class="fas fa-play fs-6"></i></span>
+                    <input type="datetime-local" name="start_time" class="form-control">
+                </div>
+            </div>
+
+            <!-- End Time Input -->
+            <div class="col-sm-3">
+                <div class="input-group" title="End Time">
+                    <span class="input-group-text"><i class="fas fa-stop fs-6"></i></span>
+                    <input type="datetime-local" name="end_time" class="form-control">
+                </div>
+            </div>
+
+            <!-- Add Button -->
+            <div class="col-sm-1">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+        </form>
+
+        <!-- Check if there are any tasks at all -->
+        {% if tasks %}
+
+            <!-- Toggle Buttons -->
+            <div class="text-center toggle-btns mb-4">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary active" id="ongoingBtn">Ongoing</button>
+                    <button type="button" class="btn btn-outline-dark" id="completedBtn">Completed</button>
+                </div>
+            </div>
+
+            <!-- ONGOING TASKS SECTION -->
+            <div id="ongoing-section">
+                <ul class="list-group list-group-flush mb-5">
+                    {% for task in tasks %}
+                        {% if not task.done %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            
+                            <!-- Left Side: Title and Info -->
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="fs-5">
+                                    {{ task.title }}
+                                </span>
+
+                                <div class="d-flex flex-wrap gap-2">
+                                    {% if task.start_time %}
+                                    <span class="badge rounded-pill bg-light text-secondary border" title="Start Time">
+                                        <i class="fas fa-play me-1 text-primary" style="font-size: 0.7em;"></i> {{ task.start_time|date:"M d, H:i" }}
+                                    </span>
+                                    {% endif %}
+
+                                    {% if task.end_time %}
+                                        {% if task.is_expired %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-exclamation-circle me-1"></i>Expired
+                                            </span>
+                                        {% else %}
+                                            <span class="badge rounded-pill bg-light text-secondary border" title="End Time">
+                                                <i class="fas fa-stop me-1 text-danger" style="font-size: 0.7em;"></i> {{ task.end_time|date:"M d, H:i" }}
+                                            </span>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'update_task' task.id %}" class="btn btn-sm btn-success">
+                                    <i class="fas fa-check"></i>
+                                </a>
+                                <a href="{% url 'delete_task' task.id %}" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- COMPLETED TASKS SECTION (Hidden by default) -->
+            <div id="completed-section" style="display: none;">
+                <ul class="list-group list-group-flush opacity-75">
+                    {% for task in tasks %}
+                        {% if task.done %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center bg-light">
+                            
+                            <!-- Left Side: Title and Info -->
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="fs-5 text-decoration-line-through text-muted">
+                                    {{ task.title }}
+                                </span>
+                                
+                                <!-- Simplified time display for completed items -->
+                                {% if task.end_time %}
+                                <span class="badge rounded-pill bg-light text-muted border">
+                                    Done
+                                </span>
+                                {% endif %}
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'update_task' task.id %}" class="btn btn-sm btn-secondary" title="Mark as incomplete">
+                                    <i class="fas fa-undo"></i>
+                                </a>
+                                <a href="{% url 'delete_task' task.id %}" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- Toggle Script -->
+            <script>
+                const ongoingBtn = document.getElementById('ongoingBtn');
+                const completedBtn = document.getElementById('completedBtn');
+                const ongoingSection = document.getElementById('ongoing-section');
+                const completedSection = document.getElementById('completed-section');
+
+                ongoingBtn.addEventListener('click', function() {
+                    ongoingSection.style.display = 'block';
+                    completedSection.style.display = 'none';
+                    
+                    ongoingBtn.classList.add('active');
+                    completedBtn.classList.remove('active');
+                });
+
+                completedBtn.addEventListener('click', function() {
+                    ongoingSection.style.display = 'none';
+                    completedSection.style.display = 'block';
+                    
+                    completedBtn.classList.add('active');
+                    ongoingBtn.classList.remove('active');
+                });
+            </script>
+
+        {% else %}
+            <!-- Empty State (Only shows if NO tasks exist at all) -->
+            <div class="text-center text-muted py-5">
+                <h4>No tasks yet!</h4>
+                <p>Add a task above to get started.</p>
+            </div>
+        {% endif %}
+
+    </div>
+</div>
+
+{% endblock %}
